@@ -115,12 +115,16 @@ def train(opt):
         tmp = [Variable(torch.from_numpy(_), requires_grad=False).cuda() for _ in tmp]
         fc_feats, att_feats, labels, reverse_labels, masks, reverse_masks = tmp
         optimizer.zero_grad()
-        loss = crit(model(fc_feats, att_feats, labels), labels[:,1:], masks[:,1:])
-        import ipdb; ipdb.set_trace() 
-
-        back_loss = crit(model(fc_feats, att_feats, labels), reverse_labels[:,1:], reverse_masks[:,1:]) 
+        
+        out, states = model(fc_feats, att_feats, labels)
+        back_out, back_states = back_model(fc_feats, att_feats, reverse_labels)
+        loss = crit( out, labels[:,1:], masks[:,1:])
+        back_loss = crit(back_out, reverse_labels[:,1:], reverse_masks[:,1:]) 
+        
+        l2_loss = ((states - back_states )** 2).mean()
+        loss += 0.1 * l2_loss + back_loss
         loss.backward()
-        back_loss.backward()
+        #back_loss.backward()
         utils.clip_gradient(optimizer, opt.grad_clip)
         optimizer.step()
         train_loss = loss.data[0]
