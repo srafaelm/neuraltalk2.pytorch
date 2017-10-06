@@ -70,7 +70,7 @@ def eval_split(model, crit, loader, eval_kwargs={}):
 
     # Make sure in the evaluation mode
     model.eval()
-
+    
     loader.reset_iterator(split)
 
     n = 0
@@ -87,8 +87,9 @@ def eval_split(model, crit, loader, eval_kwargs={}):
             tmp = [data['fc_feats'], data['att_feats'], data['labels'], data['masks']]
             tmp = [Variable(torch.from_numpy(_), volatile=True).cuda() for _ in tmp]
             fc_feats, att_feats, labels, masks = tmp
-
-            loss = crit(model(fc_feats, att_feats, labels), labels[:,1:], masks[:,1:]).data[0]
+            
+            out, _ = model(fc_feats, att_feats, labels)
+            loss = crit(out, labels[:,1:], masks[:,1:]).data[0]
             loss_sum = loss_sum + loss
             loss_evals = loss_evals + 1
 

@@ -68,7 +68,7 @@ def train(opt):
     model = models.setup(opt)
     model.cuda()
 
-    back_model = models.setup(opt)
+    back_model = models.setup(opt, reverse=True)
     back_model.cuda()
 
     update_lr_flag = True
@@ -115,23 +115,27 @@ def train(opt):
         tmp = [Variable(torch.from_numpy(_), requires_grad=False).cuda() for _ in tmp]
         fc_feats, att_feats, labels, reverse_labels, masks, reverse_masks = tmp
         optimizer.zero_grad()
-        
         out, states = model(fc_feats, att_feats, labels)
         back_out, back_states = back_model(fc_feats, att_feats, reverse_labels)
-        loss = crit( out, labels[:,1:], masks[:,1:])
-        back_loss = crit(back_out, reverse_labels[:,1:], reverse_masks[:,1:]) 
         
+        loss = crit( out, labels[:,1:], masks[:,1:])
+        back_loss = crit(back_out, reverse_labels[:,:-1], reverse_masks[:,:-1]) 
+        
+        back_states.detach()
         l2_loss = ((states - back_states )** 2).mean()
-        loss += 0.1 * l2_loss + back_loss
-        loss.backward()
+        all_loss = loss + 2.0 * l2_loss + back_loss
+        all_loss.backward()
         #back_loss.backward()
         utils.clip_gradient(optimizer, opt.grad_clip)
         optimizer.step()
+        train_l2_loss = l2_loss.data[0]
         train_loss = loss.data[0]
+        train_all_loss = all_loss.data[0]
+        train_back_loss = back_loss.data[0]
         torch.cuda.synchronize()
         end = time.time()
-        print("iter {} (epoch {}), train_loss = {:.3f}, time/batch = {:.3f}" \
-            .format(iteration, epoch, train_loss, end - start))
+        print("iter {} (epoch {}), train_loss = {:.3f}, l2_loss = {:.3f}, back_loss = {:.3f}, all_loss = {:.3f}, time/batch = {:.3f}" \
+            .format(iteration, epoch, train_loss, train_l2_loss, train_back_loss, train_all_loss, end - start))
 
         # Update the iteration and epoch
         iteration += 1
@@ -143,6 +147,9 @@ def train(opt):
         if (iteration % opt.losses_log_every == 0):
             if tf is not None:
                 add_summary_value(tf_summary_writer, 'train_loss', train_loss, iteration)
+                add_summary_value(tf_summary_writer, 'l2_loss', train_l2_loss, iteration)
+                add_summary_value(tf_summary_writer, 'all_loss', train_all_loss, iteration)
+                add_summary_value(tf_summary_writer, 'back_loss', train_back_loss, iteration)
                 add_summary_value(tf_summary_writer, 'learning_rate', opt.current_lr, iteration)
                 add_summary_value(tf_summary_writer, 'scheduled_sampling_prob', model.ss_prob, iteration)
                 tf_summary_writer.flush()
