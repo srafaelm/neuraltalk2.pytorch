@@ -12,6 +12,7 @@ import numpy as np
 import time
 import os
 from six.moves import cPickle
+from itertools import chain
 
 import opts
 import models
@@ -77,8 +78,8 @@ def train(opt):
     back_model.train()
 
     crit = utils.LanguageModelCriterion()
-
-    optimizer = optim.Adam(model.parameters(), lr=opt.learning_rate, weight_decay=opt.weight_decay)
+    all_param = chain(model.parameters(), back_model.parameters()) 
+    optimizer = optim.Adam(all_param, lr=opt.learning_rate, weight_decay=opt.weight_decay)
 
     # Load the optimizer
     if vars(opt).get('start_from', None) is not None:
@@ -122,8 +123,11 @@ def train(opt):
         back_loss = crit(back_out, reverse_labels[:,:-1], reverse_masks[:,:-1]) 
         
         back_states.detach()
+        
         l2_loss = ((states - back_states )** 2).mean()
-        all_loss = loss + 2.0 * l2_loss + back_loss
+        
+        all_loss = loss + 1.0 * l2_loss + back_loss
+        
         all_loss.backward()
         #back_loss.backward()
         utils.clip_gradient(optimizer, opt.grad_clip)
