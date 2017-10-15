@@ -6,15 +6,22 @@ import misc.utils as utils
 import torch
 
 from .ShowTellModel import ShowTellModel
+from .ShowTellTwinModel import ShowTellTwinModel
 from .FCModel import FCModel
-from .CaptionModel import ShowAttendTellModel, AllImgModel
+from .CaptionModel import ShowAttendTellModel, AllImgModel, ShowAttendTellTwinModel, ShowAttendTellTwinParamModel
 from .Att2inModel import Att2inModel
 from .AttModel import *
 
-def setup(opt):
+def setup(opt, reverse=False):
     
     if opt.caption_model == 'show_tell':
         model = ShowTellModel(opt)
+    elif opt.caption_model == 'show_tell_twin':
+        model = ShowTellTwinModel(opt, reverse=reverse)
+    elif opt.caption_model == 'show_attend_tell_twin':
+        model = ShowAttendTellTwinModel(opt, reverse=reverse)
+    elif opt.caption_model == 'show_attend_tell_twin_param':
+        model = ShowAttendTellTwinParamModel(opt, reverse=reverse)
     elif opt.caption_model == 'show_attend_tell':
         model = ShowAttendTellModel(opt)
     # img is concatenated with word embedding at every time step as the input of lstm
