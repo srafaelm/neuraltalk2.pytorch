@@ -68,7 +68,6 @@ def train(opt):
 
     model = models.setup(opt)
     model.cuda()
-
     back_model = models.setup(opt, reverse=True)
     back_model.cuda()
 
@@ -118,15 +117,19 @@ def train(opt):
         optimizer.zero_grad()
         out, states = model(fc_feats, att_feats, labels)
         back_out, back_states = back_model(fc_feats, att_feats, reverse_labels)
-        
+        idx = [i for i in range(back_states.size()[1] - 1, -1, -1)]
+        idx = torch.LongTensor(idx)
+        idx = Variable(idx).cuda()
+        invert_backstates = back_states.index_select(1, idx)
+
         loss = crit( out, labels[:,1:], masks[:,1:])
+        
         back_loss = crit(back_out, reverse_labels[:,:-1], reverse_masks[:,:-1]) 
         
-        back_states.detach()
+        invert_backstates = invert_backstates.detach()
+        l2_loss = ((states - invert_backstates )** 2).mean()
         
-        l2_loss = ((states - back_states )** 2).mean()
-        
-        all_loss = loss + 1.0 * l2_loss + back_loss
+        all_loss = loss + 1.5 * l2_loss + back_loss
         
         all_loss.backward()
         #back_loss.backward()
