@@ -124,7 +124,7 @@ def train(opt):
 
         loss = crit( out, labels[:,1:], masks[:,1:])
         
-        back_loss = crit(back_out, reverse_labels[:,:-1], reverse_masks[:,:-1]) 
+        back_loss = crit(back_out, reverse_labels[:, 1:], reverse_masks[:, 1:]) 
         
         invert_backstates = invert_backstates.detach()
         l2_loss = ((states - invert_backstates )** 2).mean()

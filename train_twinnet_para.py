@@ -123,13 +123,13 @@ def train(opt):
         invert_backstates = back_states.index_select(1, idx)
 
         loss = crit( out, labels[:,1:], masks[:,1:])
-        back_loss = crit(back_out, reverse_labels[:,:-1], reverse_masks[:,:-1]) 
+        back_loss = crit(back_out, reverse_labels[:, 1:], reverse_masks[:, 1:]) 
         # do affine transform on forward state
 
         back_states = back_states.detach()
         l2_loss = ((affine_states - invert_backstates)** 2).mean()
         
-        all_loss = loss + 1.5 * l2_loss + back_loss
+        all_loss = loss + 2.0 * l2_loss + back_loss
         
         all_loss.backward()
         #back_loss.backward()
