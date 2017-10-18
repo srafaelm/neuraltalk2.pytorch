@@ -264,11 +264,11 @@ class CaptionTwinParamModel(nn.Module):
 
         outputs = []
         states = []
-        for i in range(seq.size(1)):
-            if self.training and i >= 2 and self.ss_prob > 0.0: # otherwiste no need to sample
+        for i in range(seq.size(1) -1 ):
+            if self.training and i >= 1 and self.ss_prob > 0.0: # otherwiste no need to sample
                 sample_prob = fc_feats.data.new(batch_size).uniform_(0, 1)
                 sample_mask = sample_prob < self.ss_prob
-                if sample_mask.sum() == 0:
+                if sample_mask.sum() == 0:                        
                     it = seq[:, i - 1].clone()
                 else:
                     sample_ind = sample_mask.nonzero().view(-1)
@@ -291,15 +291,15 @@ class CaptionTwinParamModel(nn.Module):
             states.append(state[0].view(state[0].size()[1], state[0].size()[2]))
 
         if self.reverse: 
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[:-1]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[:-1]], 1).contiguous()]
+            return [torch.cat([_.unsqueeze(1) for _ in outputs], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states], 1).contiguous()]
         
         else:
-            states =  torch.cat([_.unsqueeze(1) for _ in states[1:]], 1).contiguous()
+            states =  torch.cat([_.unsqueeze(1) for _ in states], 1).contiguous()
             states_shp = states.size()
             states_reshp = states.view(states_shp[0] * states_shp[1], states_shp[2])
             affine_states = self.ln_hidden(states_reshp)
             affine_states = affine_states.view(states_shp[0], states_shp[1], states_shp[2])   
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[1:]], 1).contiguous(), states, affine_states ]
+            return [torch.cat([_.unsqueeze(1) for _ in outputs], 1).contiguous(), affine_states ]
 
 
     def sample_beam(self, fc_feats, att_feats, opt={}):
@@ -484,8 +484,8 @@ class CaptionTwinModel(nn.Module):
 
         outputs = []
         states = []
-        for i in range(seq.size(1)):
-            if self.training and i >= 2 and self.ss_prob > 0.0: # otherwiste no need to sample
+        for i in range(seq.size(1) -1 ):
+            if self.training and i >= 1 and self.ss_prob > 0.0: # otherwiste no need to sample
                 sample_prob = fc_feats.data.new(batch_size).uniform_(0, 1)
                 sample_mask = sample_prob < self.ss_prob
                 if sample_mask.sum() == 0:
@@ -509,10 +509,12 @@ class CaptionTwinModel(nn.Module):
             output = F.log_softmax(self.logit(self.dropout(output)))
             outputs.append(output)
             states.append(state[0].view(state[0].size()[1], state[0].size()[2]))  
-        if self.reverse:
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[:-1]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[:-1]], 1).contiguous()]
-        else:
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[1:]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[1:]], 1).contiguous()]
+        
+        return [torch.cat([_.unsqueeze(1) for _ in outputs], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states], 1).contiguous()]
+        #if self.reverse:
+        #    return [torch.cat([_.unsqueeze(1) for _ in outputs[:-1]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[:-1]], 1).contiguous()]
+        #else:
+        #    return [torch.cat([_.unsqueeze(1) for _ in outputs[1:]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[1:]], 1).contiguous()]
 
         #return torch.cat([_.unsqueeze(1) for _ in outputs], 1)
 
