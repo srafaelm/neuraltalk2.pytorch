@@ -264,22 +264,22 @@ class CaptionTwinParamModel(nn.Module):
 
         outputs = []
         states = []
-        for i in range(seq.size(1)):
-            if self.training and i >= 2 and self.ss_prob > 0.0: # otherwiste no need to sample
+        for i in range(seq.size(1) -1 ):
+            if self.training and i >= 1 and self.ss_prob > 0.0: # otherwiste no need to sample
                 sample_prob = fc_feats.data.new(batch_size).uniform_(0, 1)
                 sample_mask = sample_prob < self.ss_prob
                 if sample_mask.sum() == 0:
-                    it = seq[:, i - 1].clone()
+                    it = seq[:, i ].clone()
                 else:
                     sample_ind = sample_mask.nonzero().view(-1)
-                    it = seq[:, i - 1 ].data.clone()
+                    it = seq[:, i  ].data.clone()
                     #prob_prev = torch.exp(outputs[-1].data.index_select(0, sample_ind)) # fetch prev distribution: shape Nx(M+1)
                     #it.index_copy_(0, sample_ind, torch.multinomial(prob_prev, 1).view(-1))
                     prob_prev = torch.exp(outputs[-1].data) # fetch prev distribution: shape Nx(M+1)
                     it.index_copy_(0, sample_ind, torch.multinomial(prob_prev, 1).view(-1).index_select(0, sample_ind))
                     it = Variable(it, requires_grad=False)
             else:
-                it = seq[:, i - 1].clone()
+                it = seq[:, i ].clone()
             # break if all the sequences end
             #if i >= 1 and seq[:, i].data.sum() == 0:
             #    break
@@ -291,15 +291,15 @@ class CaptionTwinParamModel(nn.Module):
             states.append(state[0].view(state[0].size()[1], state[0].size()[2]))
 
         if self.reverse: 
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[:-1]], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states[:-1]], 1).contiguous()]
+            return [torch.cat([_.unsqueeze(1) for _ in outputs], 1).contiguous(), torch.cat([_.unsqueeze(1) for _ in states], 1).contiguous()]
         
         else:
-            states =  torch.cat([_.unsqueeze(1) for _ in states[1:]], 1).contiguous()
+            states =  torch.cat([_.unsqueeze(1) for _ in states], 1).contiguous()
             states_shp = states.size()
             states_reshp = states.view(states_shp[0] * states_shp[1], states_shp[2])
             affine_states = self.ln_hidden(states_reshp)
             affine_states = affine_states.view(states_shp[0], states_shp[1], states_shp[2])   
-            return [torch.cat([_.unsqueeze(1) for _ in outputs[1:]], 1).contiguous(), states, affine_states ]
+            return [torch.cat([_.unsqueeze(1) for _ in outputs], 1).contiguous(), affine_states ]
 
 
     def sample_beam(self, fc_feats, att_feats, opt={}):
