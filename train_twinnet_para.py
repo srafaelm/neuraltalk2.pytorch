@@ -127,7 +127,11 @@ def train(opt):
         # do affine transform on forward state
 
         back_states = back_states.detach()
-        l2_loss = ((affine_states - invert_backstates)** 2).mean()
+        affine_states = affine_states * masks[:, 1:].unsqueeze(2).expand_as(affine_states)
+        invert_backstates = invert_backstates * masks[:, 1:].unsqueeze(2).expand_as(invert_backstates)
+
+        l2_loss = ((affine_states - invert_backstates)** 2).sum(dim=1)[:, 0, :]
+        l2_loss = (l2_loss / masks[:, 1:].sum(dim=1).expand_as(l2_loss)).mean()
         
         all_loss = loss + 2.0 * l2_loss + back_loss
         
