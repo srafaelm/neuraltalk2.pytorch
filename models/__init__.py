@@ -53,6 +53,10 @@ def setup(opt, reverse=False):
         # check if all necessary files exist 
         assert os.path.isdir(opt.start_from)," %s must be a a path" % opt.start_from
         assert os.path.isfile(os.path.join(opt.start_from,"infos_"+opt.id+".pkl")),"infos.pkl file does not exist in path %s"%opt.start_from
-        model.load_state_dict(torch.load(os.path.join(opt.start_from, 'model.pth')))
+        forward_dict, backward_dict = torch.load(os.path.join(opt.start_from, 'model.pth'))
+        if reverse:
+            model.load_state_dict(backward_dict)
+        else:
+            model.load_state_dict(forward_dict)
 
     return model
