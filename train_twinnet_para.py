@@ -45,7 +45,7 @@ def train(opt):
         with open(os.path.join(opt.start_from, 'infos_'+opt.id+'.pkl')) as f:
             infos = cPickle.load(f)
             saved_model_opt = infos['opt']
-            need_be_same=["caption_model", "rnn_type", "rnn_size", "num_layers"]
+            need_be_same = ["caption_model", "rnn_type", "rnn_size", "num_layers"]
             for checkme in need_be_same:
                 assert vars(saved_model_opt)[checkme] == vars(opt)[checkme], "Command line argument and saved model disagree on '%s' " % checkme
 
@@ -147,7 +147,9 @@ def train(opt):
         l2_loss = ((affine_states - invert_backstates)** 2).sum(dim=1)[:, 0, :]
         l2_loss = (l2_loss / masks[:, 1:-1].sum(dim=1).expand_as(l2_loss)).mean()
         
-        all_loss = loss + 3.0 * l2_loss + back_loss
+        if opt.param_l2 == 0:
+            back_loss = 0. * back_loss
+        all_loss = loss + opt.param_l2 * l2_loss + back_loss
         
         all_loss.backward()
         #back_loss.backward()
@@ -211,7 +213,7 @@ def train(opt):
                     best_val_score = current_score
                     best_flag = True
                 checkpoint_path = os.path.join(opt.checkpoint_path, 'model.pth')
-                torch.save(model.state_dict(), checkpoint_path)
+                torch.save([model.state_dict(), back_model.state_dict()], checkpoint_path)
                 print("model saved to {}".format(checkpoint_path))
                 optimizer_path = os.path.join(opt.checkpoint_path, 'optimizer.pth')
                 torch.save(optimizer.state_dict(), optimizer_path)
