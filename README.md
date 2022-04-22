@@ -1,7 +1,5 @@
 # Neuraltalk2-pytorch
 
-THIS IS RAFA's VERSION
-
 Changes compared to neuraltalk2.
 - Instead of using random split, we use [karpathy's train-val-test split](http://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip).
 - Instead of including the convnet in the model, we use preprocessed features. (finetuneable cnn version is in the branch **with_finetune**)
